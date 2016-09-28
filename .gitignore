@@ -1,0 +1,5 @@
+.~lock*
+*.o
+mem_shell
+mem_alloc_test
+
