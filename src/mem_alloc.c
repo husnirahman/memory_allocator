@@ -129,6 +129,7 @@ char *memory_alloc(int size){
     mem_free_block_t old_free_block = **free_block_ref; // Copy on stack
     mem_used_block_t* alloc_block = (mem_used_block_t*) *free_block_ref;
     alloc_block->size = alloc_size; 
+    alloc_block->magic = MAGIC_NUMBER;
     
     int remaining_size = old_free_block.size - alloc_size;
     if (remaining_size < sizeof(mem_free_block_t)) {
@@ -155,9 +156,16 @@ char *memory_alloc(int size){
 
 void memory_free(char* p) {
     char* block_start = p - sizeof(mem_used_block_t);
+    mem_used_block_t* used_block = (mem_used_block_t*) block_start;
+    if(used_block->magic != MAGIC_NUMBER) {
+      print_error_free(p);
+      exit(1486);
+    }
+    used_block->magic = 0;
+
     mem_free_block_t* block = (mem_free_block_t*) block_start;
     char* block_end = block_start + block->size;
-    
+
     mem_free_block_t* after = first_free;
     mem_free_block_t* before = NULL;
     
@@ -218,6 +226,11 @@ void print_free_info(char *addr) {
 
 void print_error_alloc(int size) {
     fprintf(stderr, "ALLOC error : can't allocate %d bytes\n", size);
+}
+
+void print_error_free(char* addr) 
+{
+    fprintf(stderr, "FREE error : Given pointer: %p is not valid\n", addr);
 }
 
 void print_info(void) {

@@ -57,6 +57,9 @@ leak_test: tests/leak_test.c libmalloc.o libmalloc_std.o
 leak_test2: tests/leak_test2.c mem_alloc.c
 	$(CC) -DMEMORY_SIZE=1024 $(CONFIG_FLAG) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
+magic_test: tests/magic_test.c mem_alloc.c  
+	$(CC) -DMEMORY_SIZE=512 $(CONFIG_FLAG) $(CFLAGS) $(LDFLAGS) $^ -o $@
+
 
 %.out: %.in ./mem_shell
 	@cat $< | ./mem_shell >/dev/null 2>$@

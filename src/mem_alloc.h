@@ -24,6 +24,7 @@ void print_free_info(char *addr);
 /* to be called when an allocation fails*/
 /* size: the size of the block requested by the user*/
 void print_error_alloc(int size);
+void print_error_free(char*);
 
 void print_free_blocks(void);
 void print_info(void); 
