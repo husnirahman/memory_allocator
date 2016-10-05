@@ -42,10 +42,7 @@ mem_free_block_t** find_free_block(int block_size) {
     mem_free_block_t ** best_ref = NULL;
   
     while (it != NULL) {
-      if (block_size == it->size) {      
-        return it_ref;
-      }
-      else if ((block_size < it->size) && (best_size > it->size)){
+      if ((block_size <= it->size) && (best_size > it->size)){
         best_size = it->size;
         best_ref = it_ref;
       }
@@ -66,7 +63,7 @@ mem_free_block_t** find_free_block(int block_size) {
     mem_free_block_t ** best_ref = NULL;
   
     while (it != NULL) {
-      if ((block_size < it->size) && (best_size < it->size)){
+      if ((block_size <= it->size) && (best_size < it->size)){
         best_size = it->size;
         best_ref = it_ref;
       }
@@ -159,11 +156,13 @@ void memory_free(char *p){
     mem_free_block_t * it = first_free;
     mem_free_block_t * it_prec = NULL;
     
+    // Search
     while((it != NULL) && ((char*)it < p2)) {
       it_prec = it;
       it = it->next;
     } 
 
+    // Merge right block if necessary
     if (it != NULL) {
       if(p2 == (char*)it) {
         block->size += it->size;
@@ -173,7 +172,11 @@ void memory_free(char *p){
         block->next = it;
       }
     }
+    else {
+      block->next = NULL;
+    }
 
+    // Merge left block if necessary
     if (it_prec != NULL) {
       if(p == ((char*)it_prec + it_prec->size)) {
         it_prec->size += block->size;
