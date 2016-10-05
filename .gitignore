@@ -1,5 +1,7 @@
 .~lock*
 *.o
-mem_shell
-mem_alloc_test
+
+src/mem_shell
+src/mem_alloc_test
+src/mem_shell_sim
 
