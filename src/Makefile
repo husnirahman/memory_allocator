@@ -24,7 +24,6 @@ endif
 
 TEST_FILES = $(wildcard tests/*.in)
 TEST_LIST = $(patsubst %.in,%.test,$(TEST_FILES))
-TEST_LIST += test_leak.test test_leak2.test
 
 BIN_FILES = mem_alloc_test mem_shell mem_shell_sim leak_test leak_test2
 

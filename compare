@@ -1,9 +1,0 @@
-#! /usr/bin/bash
-
-make -B mem_shell_sim mem_shell
-echo "==================================="
-
-./mem_shell_sim < $1
-echo "==================================="
-
-./mem_shell < $1
