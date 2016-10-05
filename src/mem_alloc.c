@@ -15,19 +15,21 @@ mem_free_block_t *first_free;
 #define ULONG(x)((long unsigned int)(x))
 #define max(x,y) (x>y?x:y)
 
+#define BLOCK_AFTER(block) (((char*) block) + block->size) 
+
 #if defined(FIRST_FIT)
 
-mem_free_block_t** find_free_block(int block_size) {
-    mem_free_block_t * it = first_free;    
-    mem_free_block_t ** it_ref = &first_free;
+mem_free_block_t** find_free_block(int alloc_size) {
+    mem_free_block_t** free_block_ref = &first_free;
+    mem_free_block_t* free_block = first_free;
     
-    while (it != NULL) {
-      if (block_size <= it->size) {
-        return it_ref;
+    while (free_block != NULL) {
+      if (alloc_size <= free_block->size) {
+        return free_block_ref;
       }
       
-      it_ref = &(it->next);
-      it = it->next;  
+      free_block_ref = &(free_block->next);
+      free_block = free_block->next;  
     }
     
     return NULL;
@@ -35,63 +37,59 @@ mem_free_block_t** find_free_block(int block_size) {
 
 #elif defined(BEST_FIT)
 
-mem_free_block_t** find_free_block(int block_size) {
-    mem_free_block_t * it = first_free;    
-    mem_free_block_t ** it_ref = &first_free;
-    int best_size = MEMORY_SIZE + 1;
-    mem_free_block_t ** best_ref = NULL;
+mem_free_block_t** find_free_block(int alloc_size) {
+    mem_free_block_t** free_block_ref = &first_free;
+    mem_free_block_t* free_block = first_free;
+
+    mem_free_block_t** candidate_ref = NULL;
+    int candidate_size = MEMORY_SIZE + 1;
   
-    while (it != NULL) {
-      if ((block_size <= it->size) && (best_size > it->size)){
-        best_size = it->size;
-        best_ref = it_ref;
+    while (free_block != NULL) {
+      if (alloc_size == free_block->size) {
+        return free_block_ref;
+      }
+      else if ((alloc_size <= free_block->size) && (candidate_size > free_block->size)){
+        candidate_size = free_block->size;
+        candidate_ref = free_block_ref;
       }
       
-      it_ref = &(it->next);
-      it = it->next;  
+      free_block_ref = &(free_block->next);
+      free_block = free_block->next;  
     }
     
-    return best_ref;
+    return candidate_ref;
 }
 
 #elif defined(WORST_FIT)
 
-mem_free_block_t** find_free_block(int block_size) {
-    mem_free_block_t * it = first_free;    
-    mem_free_block_t ** it_ref = &first_free;
-    int best_size = 0;
-    mem_free_block_t ** best_ref = NULL;
+mem_free_block_t** find_free_block(int alloc_size) {
+    mem_free_block_t** free_block_ref = &first_free;
+    mem_free_block_t* free_block = first_free;
+
+    mem_free_block_t** candidate_ref = NULL;
+    int candidate_size = 0;
   
-    while (it != NULL) {
-      if ((block_size <= it->size) && (best_size < it->size)){
-        best_size = it->size;
-        best_ref = it_ref;
+    while (free_block != NULL) {
+      if ((alloc_size <= free_block->size) && (candidate_size < free_block->size)){
+        candidate_size = free_block->size;
+        candidate_ref = free_block_ref;
       }
       
-      it_ref = &(it->next);
-      it = it->next;  
+      free_block_ref = &(free_block->next);
+      free_block = free_block->next;  
     }
     
-    return best_ref;
+    return candidate_ref;
 }
 
 #endif
 
-void run_at_exit(void)
-{
-    /* function called when the programs exits */
-    /* To be used to display memory leaks informations */
-    if(first_free == NULL || first_free->size != MEMORY_SIZE) {
-      fprintf(stderr, "Allocated memory blocks are not freed!\n");
-    } 
-    /* ... */
+void run_at_exit(void) {
 }
 
 
 
-void memory_init(void){
-
-    /* register the function that will be called when the programs exits*/
+void memory_init(void) {
     atexit(run_at_exit);
 
     first_free = (mem_free_block_t*) memory;
@@ -104,41 +102,50 @@ char *memory_alloc(int size){
       return NULL;
     }
 
-    int block_size = sizeof(mem_used_block_t) + size;
+    int alloc_size = sizeof(mem_used_block_t) + size;
     
-    int misalignment = block_size % MEM_ALIGNMENT;
+    // Takes care of alignment, once and for all
+    int misalignment = alloc_size % MEM_ALIGNMENT;
     if (misalignment > 0) {
-      block_size += MEM_ALIGNMENT - misalignment;
+      alloc_size += MEM_ALIGNMENT - misalignment;
     }
     
 #ifdef USED_BLOCK_MINMUM_SIZE 
-    if(block_size < sizeof(mem_free_block_t)) {
-      block_size = sizeof(mem_free_block_t);
+    // Makes sure the newly allocated block is big
+    // enough to become free again at some point
+    if (alloc_size < sizeof(mem_free_block_t)) {
+      alloc_size = sizeof(mem_free_block_t);
     }
 #endif
     
-    mem_free_block_t ** free_block_ref = find_free_block(block_size);
+    // Find the free block (according to the choosen policy)
+    mem_free_block_t ** free_block_ref = find_free_block(alloc_size);
     if (free_block_ref == NULL) {
       print_error_alloc(size);
+      exit(0);
       return NULL;
     }
 
-    mem_free_block_t free_block = **free_block_ref;
+    mem_free_block_t old_free_block = **free_block_ref; // Copy on stack
     mem_used_block_t* alloc_block = (mem_used_block_t*) *free_block_ref;
-    alloc_block->size = block_size; 
+    alloc_block->size = alloc_size; 
     
-    if (free_block.size - block_size <= sizeof(mem_free_block_t)) {
-      // In case the remaining size is not enough to store metadata,
+    int remaining_size = old_free_block.size - alloc_size;
+    if (remaining_size <= sizeof(mem_free_block_t)) {
+      // In case the remaining size (for the new free block)
+      // is not enough to store metadata of a free block,
       // we just include it to the allocated block
-      alloc_block->size = free_block.size;
-      *free_block_ref = free_block.next;
+      alloc_block->size = old_free_block.size;
+      *free_block_ref = old_free_block.next;
     }
     else {
-      mem_free_block_t* new_block;
-      new_block = (mem_free_block_t*) ((char*) alloc_block + block_size);
-      new_block->size = free_block.size - block_size;
-      new_block->next = free_block.next;
-      *free_block_ref = new_block;
+      // Create a new free block using the remaining space
+      mem_free_block_t* new_free_block;
+      new_free_block = (mem_free_block_t*) BLOCK_AFTER(alloc_block);
+      new_free_block->size = remaining_size;
+      new_free_block->next = old_free_block.next;
+
+      *free_block_ref = new_free_block;
     }
  
     char* payload = (char*) (alloc_block + 1);
@@ -146,53 +153,50 @@ char *memory_alloc(int size){
     return payload;
 }
 
-void memory_free(char *p){
-    print_free_info(p);
-    p -= sizeof(mem_used_block_t);
-    mem_free_block_t* block = (mem_free_block_t*) p;
+void memory_free(char* p) {
+    char* block_start = p - sizeof(mem_used_block_t);
+    mem_free_block_t* block = (mem_free_block_t*) block_start;
+    char* block_end = block_start + block->size;
     
-    char* p2 = p + block->size;
+    mem_free_block_t* after = first_free;
+    mem_free_block_t* before = NULL;
     
-    mem_free_block_t * it = first_free;
-    mem_free_block_t * it_prec = NULL;
-    
-    // Search
-    while((it != NULL) && ((char*)it < p2)) {
-      it_prec = it;
-      it = it->next;
+    // Search for surrounding blocks
+    while (after != NULL && (char*) after < block_end) {
+      before = after;
+      after = after->next;
     } 
 
-    // Merge right block if necessary
-    if (it != NULL) {
-      if(p2 == (char*)it) {
-        block->size += it->size;
-        block->next = it->next;
-      } 
-      else {
-        block->next = it;
-      }
+    // Handle block after
+    if (after == NULL || block_end != (char*) after) {
+      // Non contiguous, link them
+      block->next = after;
     }
-    else {
-      block->next = NULL;
+    else if (block_end == (char*) after) {
+      // Contiguous, merge them
+      block->size += after->size;
+      block->next = after->next;
     }
 
-    // Merge left block if necessary
-    if (it_prec != NULL) {
-      if(p == ((char*)it_prec + it_prec->size)) {
-        it_prec->size += block->size;
-        it_prec->next = block->next;
-      }
-      else {
-        it_prec->next = block;
-      }
-    }
-    else {
+    // Handle block before
+    if (before == NULL) {
       first_free = block;
     }
+    else if (block_start != BLOCK_AFTER(before)) {
+      // Non contiguous, link them
+      before->next = block;
+    }
+    else {
+      // Contiguous, merge them
+      before->size += block->size;
+      before->next = block->next;
+    }
+
+    print_free_info(p);
 }
 
 
-void print_alloc_info(char *addr, int size){
+void print_alloc_info(char *addr, int size) {
   if(addr){
       fprintf(stderr, "ALLOC at : %lu (%d byte(s))\n", 
               ULONG(addr - memory), size);
@@ -203,7 +207,7 @@ void print_alloc_info(char *addr, int size){
 }
 
 
-void print_free_info(char *addr){
+void print_free_info(char *addr) {
     if(addr){
         fprintf(stderr, "FREE  at : %lu \n", ULONG(addr - memory));
     }
@@ -212,8 +216,7 @@ void print_free_info(char *addr){
     }
 }
 
-void print_error_alloc(int size) 
-{
+void print_error_alloc(int size) {
     fprintf(stderr, "ALLOC error : can't allocate %d bytes\n", size);
 }
 
@@ -241,7 +244,7 @@ char *heap_base(void) {
 }
 
 #ifdef MAIN
-int main(int argc, char **argv){
+int main(int argc, char **argv) {
   /* The main can be changed, it is *not* involved in tests */
   memory_init();
   print_info(); 
