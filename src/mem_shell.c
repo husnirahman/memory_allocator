@@ -17,6 +17,7 @@ int main(int argc, char *argv[]) {
 	//int offset;
         int index;
 	int taille;
+	char* adresse;
 
         char* block_pointer[1024];
         int count=1;
@@ -34,13 +35,14 @@ int main(int argc, char *argv[]) {
 		switch (commande) {
 		case 'a':
 		  scanf ("%d",&taille);
-		  block_pointer[count]=memory_alloc(taille);
+		  adresse = memory_alloc(taille);
+		  block_pointer[count] = adresse;
                   count++;
-		  /*if (adresse == NULL)
+		  if (adresse == NULL)
 		    printf("Allocation failed\n");
 		  else
 		    printf("Memory allocated at %d\n", (int) (adresse-heap_base()));
-*/
+		    
 		  break;
 		case 'f': 
 		  /* scanf ("%d",&offset); */
