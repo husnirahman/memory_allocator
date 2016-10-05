@@ -66,10 +66,7 @@ mem_free_block_t** find_free_block(int block_size) {
     mem_free_block_t ** best_ref = NULL;
   
     while (it != NULL) {
-      if (block_size == it->size) {      
-        return it_ref;
-      }
-      else if ((block_size < it->size) && (best_size < it->size)){
+      if ((block_size < it->size) && (best_size < it->size)){
         best_size = it->size;
         best_ref = it_ref;
       }
@@ -111,12 +108,21 @@ char *memory_alloc(int size){
     }
 
     int block_size = sizeof(mem_used_block_t) + size;
-    block_size += MEM_ALIGNMENT - block_size % MEM_ALIGNMENT;
+    
+    int misalignment = block_size % MEM_ALIGNMENT;
+    if (misalignment > 0) {
+      block_size += MEM_ALIGNMENT - misalignment;
+    }
+    
+#ifdef USED_BLOCK_MINMUM_SIZE 
+    if(block_size < sizeof(mem_free_block_t)) {
+      block_size = sizeof(mem_free_block_t);
+    }
+#endif
     
     mem_free_block_t ** free_block_ref = find_free_block(block_size);
     if (free_block_ref == NULL) {
       print_error_alloc(size);
-      print_free_blocks();
       return NULL;
     }
 
