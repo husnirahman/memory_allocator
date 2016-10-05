@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
 		  block_pointer[count] = adresse;
                   count++;
 		  if (adresse == NULL)
-		    printf("Allocation failed\n");
+		    printf("Allocation failed!!!!!!!!\n");
 		  else
 		    printf("Memory allocated at %d\n", (int) (adresse-heap_base()));
 		    

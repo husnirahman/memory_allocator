@@ -146,14 +146,14 @@ char *memory_alloc(int size){
 void memory_free(char *p){
     print_free_info(p);
     p -= sizeof(mem_used_block_t);
-    mem_free_block_t* block = (mem_free_bplock_t*) p;
+    mem_free_block_t* block = (mem_free_block_t*) p;
     
     char* p2 = p + block->size;
     
     mem_free_block_t * it = first_free;
     mem_free_block_t * it_prec = NULL;
     
-    while(((char*)it < p2) && (it != NULL)) {
+    while((it != NULL) && ((char*)it < p2)) {
       it_prec = it;
       it = it->next;
     } 
