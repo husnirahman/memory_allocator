@@ -131,7 +131,7 @@ char *memory_alloc(int size){
     alloc_block->size = alloc_size; 
     
     int remaining_size = old_free_block.size - alloc_size;
-    if (remaining_size <= sizeof(mem_free_block_t)) {
+    if (remaining_size < sizeof(mem_free_block_t)) {
       // In case the remaining size (for the new free block)
       // is not enough to store metadata of a free block,
       // we just include it to the allocated block
