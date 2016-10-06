@@ -85,9 +85,12 @@ mem_free_block_t** find_free_block(int alloc_size) {
 #endif
 
 void run_at_exit(void) {
+    // Check for leaks
+    if (first_free == NULL || first_free->size != MEMORY_SIZE) {
+      printf("## Memory leaks detected : \n");
+      print_used_blocks();
+    }
 }
-
-
 
 void memory_init(void) {
     atexit(run_at_exit);
@@ -154,13 +157,19 @@ char *memory_alloc(int size){
     return payload;
 }
 
-void memory_free(char* p) {
-    char* block_start = p - sizeof(mem_used_block_t);
-    mem_used_block_t* used_block = (mem_used_block_t*) block_start;
-    if(used_block->magic != MAGIC_NUMBER) {
-      print_error_free(p);
+void assert_magic_number(mem_used_block_t* block) {
+    if (block->magic != MAGIC_NUMBER) {
+      print_error_free(block + 1);
       exit(1486);
     }
+}
+
+void memory_free(char* p) {
+    char* block_start = p - sizeof(mem_used_block_t);
+
+    // Check magic number
+    mem_used_block_t* used_block = (mem_used_block_t*) block_start;
+    assert_magic_number(used_block);
     used_block->magic = 0;
 
     mem_free_block_t* block = (mem_free_block_t*) block_start;
@@ -228,8 +237,7 @@ void print_error_alloc(int size) {
     fprintf(stderr, "ALLOC error : can't allocate %d bytes\n", size);
 }
 
-void print_error_free(char* addr) 
-{
+void print_error_free(void* addr) {
     fprintf(stderr, "FREE error : Given pointer: %p is not valid\n", addr);
 }
 
@@ -252,6 +260,26 @@ void print_free_blocks(void) {
          if (i > 12)  {
            break;
          }
+    }
+}
+
+void print_used_blocks() {
+    mem_free_block_t* free = first_free;
+    void* block = memory;
+
+    while (block < (void*) (memory + MEMORY_SIZE)) {
+        if (block == free) {
+          block += free->size;
+          free = free->next;
+        }
+        else {
+          mem_used_block_t used_block = *((mem_used_block_t*) block);
+          printf("Alloc'd block at address %lu, size %lu\n",
+              ULONG(block) - ULONG(memory) + sizeof(mem_used_block_t),
+              used_block.size - sizeof(mem_used_block_t));
+
+          block += used_block.size;
+        }
     }
 }
 
