@@ -48,7 +48,7 @@ mem_free_block_t** find_free_block(int alloc_size) {
       if (alloc_size == free_block->size) {
         return free_block_ref;
       }
-      else if ((alloc_size <= free_block->size) && (candidate_size > free_block->size)){
+      else if (alloc_size <= free_block->size && candidate_size > free_block->size) {
         candidate_size = free_block->size;
         candidate_ref = free_block_ref;
       }
@@ -70,7 +70,7 @@ mem_free_block_t** find_free_block(int alloc_size) {
     int candidate_size = 0;
   
     while (free_block != NULL) {
-      if ((alloc_size <= free_block->size) && (candidate_size < free_block->size)){
+      if (alloc_size <= free_block->size && candidate_size < free_block->size) {
         candidate_size = free_block->size;
         candidate_ref = free_block_ref;
       }
@@ -172,7 +172,7 @@ void memory_free(char* p) {
       // Non contiguous, link them
       block->next = after;
     }
-    else if (block_end == (char*) after) {
+    else {
       // Contiguous, merge them
       block->size += after->size;
       block->next = after->next;
@@ -197,21 +197,21 @@ void memory_free(char* p) {
 
 
 void print_alloc_info(char *addr, int size) {
-  if(addr){
+  if (addr) {
       fprintf(stderr, "ALLOC at : %lu (%d byte(s))\n", 
               ULONG(addr - memory), size);
   }
-  else{
+  else {
       fprintf(stderr, "Warning, system is out of memory\n"); 
   }
 }
 
 
 void print_free_info(char *addr) {
-    if(addr){
+    if (addr) {
         fprintf(stderr, "FREE  at : %lu \n", ULONG(addr - memory));
     }
-    else{
+    else {
         fprintf(stderr, "FREE  at : %lu \n", ULONG(0));
     }
 }
@@ -221,7 +221,10 @@ void print_error_alloc(int size) {
 }
 
 void print_info(void) {
-  fprintf(stderr, "Memory : [%lu %lu] (%lu bytes)\n", (long unsigned int) memory, (long unsigned int) (memory+MEMORY_SIZE), (long unsigned int) (MEMORY_SIZE));
+  fprintf(stderr, "Memory : [%lu %lu] (%lu bytes)\n",
+      ULONG(memory),
+      ULONG(memory+MEMORY_SIZE),
+      ULONG(MEMORY_SIZE));
 }
 
 
@@ -230,7 +233,7 @@ void print_free_blocks(void) {
 
     fprintf(stderr, "Begin of free block list :\n"); 
     int i = 0;
-    for(current = first_free; current != NULL; current = current->next) {
+    for (current = first_free; current != NULL; current = current->next) {
         fprintf(stderr, "Free block at address %lu, size %u\n", ULONG((char*)current - memory), current->size);
          i++;
          if (i > 12)  {
