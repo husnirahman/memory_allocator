@@ -4,4 +4,5 @@
 src/mem_shell
 src/mem_alloc_test
 src/mem_shell_sim
-
+src/leak_test
+src/leak_test2
