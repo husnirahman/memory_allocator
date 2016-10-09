@@ -97,16 +97,6 @@ void memory_init(void) {
     first_free->next = NULL;
 }
 
-#define SET_NEXT(from, to) \
-    if (to != NULL && from >= to) { \
-        fprintf(stderr, "\n## At %s:%d ############\n", __func__, __LINE__); \
-        fprintf(stderr, "  This is bad %lu %lu\n", \
-            ULONG(from) - ULONG(memory), \
-            ULONG(to)  - ULONG(memory)); \
-        fprintf(stderr, "###################################\n\n"); \
-    } \
-    (from)->next = (to)
-
 char *memory_alloc(int size){
     if (size < 0) {
       return NULL;
@@ -153,7 +143,7 @@ char *memory_alloc(int size){
       mem_free_block_t* new_free_block;
       new_free_block = (mem_free_block_t*) BLOCK_AFTER(alloc_block);
       new_free_block->size = remaining_size;
-      SET_NEXT(new_free_block, old_free_block.next);
+      new_free_block->next = old_free_block.next;
 
       *free_block_ref = new_free_block;
     }
@@ -180,12 +170,12 @@ void memory_free(char* p) {
     // Handle block after
     if (after == NULL || block_end != (char*) after) {
       // Non contiguous, link them
-      SET_NEXT(block, after);
+      block->next = after;
     }
     else {
       // Contiguous, merge them
       block->size += after->size;
-      SET_NEXT(block, after->next);
+      block->next = after->next;
     }
 
     // Handle block before
@@ -194,13 +184,12 @@ void memory_free(char* p) {
     }
     else if (block_start != BLOCK_AFTER(before)) {
       // Non contiguous, link them
-      SET_NEXT(before, block);
       before->next = block;
     }
     else {
       // Contiguous, merge them
       before->size += block->size;
-      SET_NEXT(before, block->next);
+      before->next = block->next;
     }
 
     print_free_info(p);
