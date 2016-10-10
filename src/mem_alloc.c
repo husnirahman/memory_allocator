@@ -110,7 +110,7 @@ char *memory_alloc(int size){
       alloc_size += MEM_ALIGNMENT - misalignment;
     }
     
-#ifdef USED_BLOCK_MINMUM_SIZE 
+#ifdef USED_BLOCK_MINIMUM_SIZE 
     // Makes sure the newly allocated block is big
     // enough to become free again at some point
     if (alloc_size < sizeof(mem_free_block_t)) {
