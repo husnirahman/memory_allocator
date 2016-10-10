@@ -6,11 +6,11 @@ void leaking_fun(int n) {
   void *a,*b,*c;
   
   if(n<0) return;
-  a = memory_alloc(20);
-  b = memory_alloc(40);
+  a = memory_alloc(5);
+  b = memory_alloc(10);
   leaking_fun(n-1);
   memory_free(a);
-  c = memory_alloc(20);
+  c = memory_alloc(5);
   leaking_fun(n-2);
   memory_free(c);
   if(!leaking || (n%2)==0) memory_free(b);
